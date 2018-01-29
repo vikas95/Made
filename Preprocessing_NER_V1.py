@@ -6,77 +6,81 @@ import glob
 from nltk.tokenize import sent_tokenize
 import xml.etree.ElementTree as ET
 
+count=0
+for filename in glob.glob(os.path.join(cwd,"MADE-1.0/corpus/*")):
+    count+=1
+    if count%20==0:
+       print(count)
+
+    file1=open(filename,"r")
+    Annotations=open(os.path.join(cwd, "MADE-1.0/annotations/" + filename.split("/")[-1]+".bioc.xml"), "r")
+    tree = ET.parse(os.path.join(cwd,"MADE-1.0/annotations/1_9.bioc.xml"))
+    root = tree.getroot()
 
 
-file1=open(os.path.join(cwd,"MADE-1.0/corpus/1_9"),"r")
-Annotations=open(os.path.join(cwd,"MADE-1.0/annotations/1_9.bioc.xml"),"r")
-tree = ET.parse(os.path.join(cwd,"MADE-1.0/annotations/1_9.bioc.xml"))
-root = tree.getroot()
+    Entity_tag=[]
+    Offset=[]
+    Ent_Length=[]
+    Ent_text=[]
+    for annot in root.iter("annotation"):
+        Entity_tag.append(annot.find("infon").text)
+        # Offset.append(annot.find("location").find("length").attrib)
+        Ent_text.append(annot.find("text").text)
+        Ent_Length.append(annot.find("location").get("length"))
+        Offset.append(annot.find("location").get("offset"))
 
+    ###### finding sentence boundaries
+    text=""
+    for line1 in file1:
+        text+=line1
 
-Entity_tag=[]
-Offset=[]
-Ent_Length=[]
-Ent_text=[]
-for annot in root.iter("annotation"):
-    Entity_tag.append(annot.find("infon").text)
-    # Offset.append(annot.find("location").find("length").attrib)
-    Ent_text.append(annot.find("text").text)
-    Ent_Length.append(annot.find("location").get("length"))
-    Offset.append(annot.find("location").get("offset"))
+    sent_boundary = []
+    sentences = sent_tokenize(text)
+    for sent in sentences:
+        sent_boundary.append(text.find(sent))
 
-###### finding sentence boundaries
-text=""
-for line1 in file1:
-    text+=line1
+    ########
+    # print (sent_boundary)
 
-sent_boundary = []
-sentences = sent_tokenize(text)
-for sent in sentences:
-    sent_boundary.append(text.find(sent))
+    BIO_file=open(os.path.join(cwd,"MADE-1.0/BIO_files/" + filename.split("/")[-1] + ".txt"),"w")
+    text=""
+    curr_pos=0
+    word_index = -1
+    file1=open(filename,"r")
+    for line in file1:
 
-########
-print (sent_boundary)
+        # line=line.strip()
+        text+=line
+        line2=line.strip()
+        words=tokenizer.tokenize(line2)
 
-BIO_file=open(os.path.join(cwd,"MADE-1.0/BIO_files/BIO_NER_V1.txt"),"w")
-text=""
-curr_pos=0
-word_index = -1
-file1=open(os.path.join(cwd,"MADE-1.0/corpus/1_9"),"r")
-for line in file1:
+        for w1 in words:
+            start=text.find(w1, curr_pos)
+            #### segmenting sentences
+            if start in sent_boundary:
+               BIO_file.write("\n")
+               # print("yes we are here")
+            #########
 
-    # line=line.strip()
-    text+=line
-    line2=line.strip()
-    words=tokenizer.tokenize(line2)
+            if str(start) in Offset:
+               word_index=Offset.index(str(start))
 
-    for w1 in words:
-        start=text.find(w1, curr_pos)
-        #### segmenting sentences
-        if start in sent_boundary:
-           BIO_file.write("\n")
-           print("yes we are here")
-        #########
+            # entities=tokenizer.tokenize(Ent_text[word_index])
+               new_line = str(start) + " " + str(start + len(w1)) + " " + w1 + " " + "B-"+Entity_tag[word_index]  +"\n"
 
-        if str(start) in Offset:
-           word_index=Offset.index(str(start))
-
-        # entities=tokenizer.tokenize(Ent_text[word_index])
-           new_line = str(start) + " " + str(start + len(w1)) + " " + w1 + " " + "B-"+Entity_tag[word_index]  +"\n"
-
-        else:
-           if word_index >=0:
-              if int(Offset[word_index])+int(Ent_Length[word_index])>= start+len(w1):
-                 new_line = str(start) + " " + str(start + len(w1)) + " " + w1 + " " + "I-" + Entity_tag[word_index] + "\n"
-              else:
-                 new_line = str(start) + " " + str(start + len(w1)) + " " + w1 + " " + "O" + "\n"
-           else:
-              new_line = str(start) + " " + str(start + len(w1)) + " " + w1 + " " + "O" + "\n"
+            else:
+               if word_index >=0:
+                  if int(Offset[word_index])+int(Ent_Length[word_index])>= start+len(w1):
+                     new_line = str(start) + " " + str(start + len(w1)) + " " + w1 + " " + "I-" + Entity_tag[word_index] + "\n"
+                  else:
+                     new_line = str(start) + " " + str(start + len(w1)) + " " + w1 + " " + "O" + "\n"
+               else:
+                  new_line = str(start) + " " + str(start + len(w1)) + " " + w1 + " " + "O" + "\n"
 
 
 
-        BIO_file.write(new_line)
-        curr_pos=start+len(w1)
+            BIO_file.write(new_line)
+            curr_pos=start+len(w1)
 
 
 
