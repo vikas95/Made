@@ -7,6 +7,7 @@ from nltk.tokenize import sent_tokenize
 import xml.etree.ElementTree as ET
 
 count=0
+incorrect_segm=0
 for filename in glob.glob(os.path.join(cwd,"MADE-1.0/corpus/*")):
     count+=1
     if count%20==0:
@@ -14,7 +15,7 @@ for filename in glob.glob(os.path.join(cwd,"MADE-1.0/corpus/*")):
 
     file1=open(filename,"r")
     Annotations=open(os.path.join(cwd, "MADE-1.0/annotations/" + filename.split("/")[-1]+".bioc.xml"), "r")
-    tree = ET.parse(os.path.join(cwd,"MADE-1.0/annotations/1_9.bioc.xml"))
+    tree = ET.parse(os.path.join(cwd, "MADE-1.0/annotations/" + filename.split("/")[-1]+".bioc.xml"))
     root = tree.getroot()
 
 
@@ -42,10 +43,11 @@ for filename in glob.glob(os.path.join(cwd,"MADE-1.0/corpus/*")):
     ########
     # print (sent_boundary)
 
-    BIO_file=open(os.path.join(cwd,"MADE-1.0/BIO_files/" + filename.split("/")[-1] + ".txt"),"w")
+    BIO_file=open(os.path.join(cwd,"MADE-1.0/BIO_files_doc_level/" + filename.split("/")[-1] + ".txt"),"w")
     text=""
     curr_pos=0
     word_index = -1
+    verification_var=[]  ## verification variable should be equal to length of Offset variable to ensure we are covering all the entities. Else, break the loop
     file1=open(filename,"r")
     for line in file1:
 
@@ -53,17 +55,22 @@ for filename in glob.glob(os.path.join(cwd,"MADE-1.0/corpus/*")):
         text+=line
         line2=line.strip()
         words=tokenizer.tokenize(line2)
+        #for w2 in words:
+            #if len(w2)==2:
+
 
         for w1 in words:
             start=text.find(w1, curr_pos)
             #### segmenting sentences
             if start in sent_boundary:
-               BIO_file.write("\n")
+               # BIO_file.write("\n")
                # print("yes we are here")
+               pass
             #########
 
             if str(start) in Offset:
                word_index=Offset.index(str(start))
+               verification_var.append(start)
 
             # entities=tokenizer.tokenize(Ent_text[word_index])
                new_line = str(start) + " " + str(start + len(w1)) + " " + w1 + " " + "B-"+Entity_tag[word_index]  +"\n"
@@ -82,8 +89,17 @@ for filename in glob.glob(os.path.join(cwd,"MADE-1.0/corpus/*")):
             BIO_file.write(new_line)
             curr_pos=start+len(w1)
 
+    if len(verification_var)!= len(set(Offset)):
+       incorrect_segm+=1
+       #print (verification_var)
+       Offset=[int(of2) for of2 in Offset]
+
+       #print (sorted(Offset))
+       print (filename)
 
 
+
+print(incorrect_segm)
 
 """
 # print (text[3589:3595])

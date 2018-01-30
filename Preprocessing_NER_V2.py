@@ -3,7 +3,7 @@ from nltk.tokenize import RegexpTokenizer  ### for nltk word tokenization
 tokenizer = RegexpTokenizer(r'\w+')
 cwd = os.getcwd()
 import glob
-from nltk.tokenize import sent_tokenize
+from nltk.tokenize import word_tokenize, sent_tokenize
 import xml.etree.ElementTree as ET
 
 count=0
@@ -43,7 +43,7 @@ for filename in glob.glob(os.path.join(cwd,"MADE-1.0/corpus/*")):
     ########
     # print (sent_boundary)
 
-    BIO_file=open(os.path.join(cwd,"MADE-1.0/BIO_files_doc_level/" + filename.split("/")[-1] + ".txt"),"w")
+    BIO_file=open(os.path.join(cwd,"MADE-1.0/BIO_files_doc_level_V2/" + filename.split("/")[-1] + ".txt"),"w")
     text=""
     curr_pos=0
     word_index = -1
@@ -55,6 +55,7 @@ for filename in glob.glob(os.path.join(cwd,"MADE-1.0/corpus/*")):
         text+=line
         line2=line.strip()
         words=tokenizer.tokenize(line2)
+
         for i2, w2 in enumerate(words):
             if len(w2)==2 and w2[0]=="x":
                words[i2]=w2[1]
@@ -87,11 +88,14 @@ for filename in glob.glob(os.path.join(cwd,"MADE-1.0/corpus/*")):
                new_line = str(start) + " " + str(start + len(w1)) + " " + w1 + " " + "B-"+Entity_tag[word_index]  +"\n"
 
             else:
+
                if word_index >=0:
-                  if int(Offset[word_index])+int(Ent_Length[word_index])>= start+len(w1):
-                     new_line = str(start) + " " + str(start + len(w1)) + " " + w1 + " " + "I-" + Entity_tag[word_index] + "\n"
-                  else:
-                     new_line = str(start) + " " + str(start + len(w1)) + " " + w1 + " " + "O" + "\n"
+                  for ind3, of3 in enumerate(Offset):
+                      if int(of3)<= start and start+len(w1) <= (int(of3)+int(Ent_Length[ind3])):
+                         new_line = str(start) + " " + str(start + len(w1)) + " " + w1 + " " + "I-" + Entity_tag[ind3] + "\n"
+                         break
+                      else:
+                         new_line = str(start) + " " + str(start + len(w1)) + " " + w1 + " " + "O" + "\n"
                else:
                   new_line = str(start) + " " + str(start + len(w1)) + " " + w1 + " " + "O" + "\n"
 
@@ -102,10 +106,10 @@ for filename in glob.glob(os.path.join(cwd,"MADE-1.0/corpus/*")):
 
     if len(verification_var)!= len(set(Offset)):
        incorrect_segm+=1
-       print (verification_var)
+       #print (verification_var)
        Offset=[int(of2) for of2 in Offset]
 
-       print (sorted(Offset))
+       #print (sorted(Offset))
        print (filename)
 
 
